@@ -89,7 +89,6 @@ CA-4_scrapper/
 │   ├── csv_to_binary.py                  # Binary converter
 │   └── create_aggregates.py              # Aggregate generator (v3 - 7-day states)
 ├── update_all.py                         # Master update script
-├── fix_scraping_errors.py                # One-time fix for missing draws
 ├── README.md                             # User documentation
 └── CLAUDE.md                             # This file
 ```
