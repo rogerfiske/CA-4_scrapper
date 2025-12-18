@@ -31,6 +31,10 @@ PROJECT_ROOT = Path(r"C:\Users\Minis\CascadeProjects\CA-4_scrapper")
 RAW_DIR = PROJECT_ROOT / "data" / "raw"
 AGGREGATES_DIR = PROJECT_ROOT / "data" / "aggregates"
 
+# MID cohort start date (MA Midday started 2008-06-09)
+# All dates before this have incomplete MID data
+MID_START_DATE = '2008-06-09'
+
 # Binary column names
 BINARY_COLS = ['date'] + [f'QS{pos}_{digit}' for pos in range(1, 5) for digit in range(10)]
 
@@ -244,6 +248,14 @@ def process_cohort(cohort_name, manifest, ca_dates, ca_binary_df, ca_original_df
     print("\nAggregating binary columns with CA actuals...")
     aggregate_df = aggregate_binary_files(dataframes, ca_dates, ca_original_df)
 
+    # Truncate MID to June 9, 2008 (when MA Midday started)
+    if cohort_name == 'todmid':
+        aggregate_df['date'] = pd.to_datetime(aggregate_df['date'])
+        before_count = len(aggregate_df)
+        aggregate_df = aggregate_df[aggregate_df['date'] >= MID_START_DATE].copy()
+        after_count = len(aggregate_df)
+        print(f"\nTruncated MID to {MID_START_DATE}: {before_count} -> {after_count} rows")
+
     # Save aggregate file
     if cohort_name == 'todeve':
         output_filename = "CA_4_predict_eve_aggregate.csv"
@@ -274,15 +286,31 @@ def create_daily_aggregate(eve_aggregate, mid_aggregate):
     """
     Combine EVE and MID aggregates by summing their binary columns.
     CA actuals remain unchanged (same in both).
+    Truncates to MID_START_DATE since MID data is incomplete before then.
     """
     binary_cols = [f'QS{pos}_{digit}' for pos in range(1, 5) for digit in range(10)]
 
-    # Start with EVE aggregate as base
-    daily = eve_aggregate.copy()
+    # Convert dates for filtering
+    eve_aggregate = eve_aggregate.copy()
+    eve_aggregate['date'] = pd.to_datetime(eve_aggregate['date'])
 
-    # Add MID aggregate values to binary columns
+    # Truncate EVE to MID start date for alignment
+    eve_truncated = eve_aggregate[eve_aggregate['date'] >= MID_START_DATE].copy()
+
+    # Start with truncated EVE aggregate as base
+    daily = eve_truncated.copy()
+
+    # Add MID aggregate values to binary columns (MID already truncated)
+    mid_aggregate = mid_aggregate.copy()
+    mid_aggregate['date'] = pd.to_datetime(mid_aggregate['date'])
+
+    # Merge on date to align properly
     for col in binary_cols:
-        daily[col] = eve_aggregate[col] + mid_aggregate[col]
+        mid_vals = mid_aggregate.set_index('date')[col]
+        daily[col] = daily['date'].map(lambda d: mid_vals.get(d, 0)) + daily[col]
+
+    # Format dates back to M/D/YYYY
+    daily['date'] = daily['date'].apply(lambda x: f"{x.month}/{x.day}/{x.year}")
 
     return daily
 
