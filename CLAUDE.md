@@ -52,20 +52,22 @@ python update_all.py --skip-scrape
 - **Aggregate:** `date,CA_QS1,CA_QS2,CA_QS3,CA_QS4,QS1_0,...,QS4_9` (45 columns, summed across states)
 
 ### Output Files
-| File | Files | Expected Row Sum | Description |
-|------|-------|------------------|-------------|
-| `CA_4_predict_eve_aggregate.csv` | 21 | 84 | Evening draws (20 states, OR has 2 draws) |
-| `CA_4_predict_mid_aggregate.csv` | 16 | 64 | Midday draws (15 states, OR has 2 draws) |
-| `CA_4_predict_daily_aggregate.csv` | 37 | 148 | Combined EVE + MID |
-| `c-4_RESULTS.txt` | - | - | CA results (oldest first) |
+| File | Files | Expected Row Sum | Start Date | Description |
+|------|-------|------------------|------------|-------------|
+| `CA_4_predict_eve_aggregate.csv` | 21 | 84 | 2008-05-19 | Evening draws (20 states, OR has 2 draws) |
+| `CA_4_predict_mid_aggregate.csv` | 16 | 64 | 2008-06-09 | Midday draws (15 states, OR has 2 draws) |
+| `CA_4_predict_daily_aggregate.csv` | 37 | 148 | 2008-06-09 | Combined EVE + MID |
+| `c-4_RESULTS.txt` | - | - | - | CA results (oldest first) |
+
+**Note:** MID and DAILY start June 9, 2008 (when MA Midday began) to ensure complete data from row 1.
 
 ### Data Integrity
 Each state contributes 4 binary "1"s per row (one per digit position). Row sums should equal:
-- **EVE:** 21 files × 4 = **84** (99.2% of rows)
-- **MID:** 16 files × 4 = **64** (98.7% of rows)
-- **DAILY:** 37 files × 4 = **148**
+- **EVE:** 21 files × 4 = **84** (99.2% of rows, 6,422 rows)
+- **MID:** 16 files × 4 = **64** (99.0% of rows, 6,401 rows)
+- **DAILY:** 37 files × 4 = **148** (98.5% of rows, 6,401 rows)
 
-Remaining ~1% gaps are due to state start dates (e.g., MA started 2008-06-09) and minor holidays.
+Remaining ~1% gaps are due to minor state holidays and data gaps.
 
 ## Project Structure
 ```
@@ -122,11 +124,12 @@ Converts original CSV files to one-hot encoded binary format.
 
 ### create_aggregates.py
 Creates aggregate files from individual state binary files (v3 - 7-day states).
-- Aligns all files to CA's date range (2008-05-19 to present)
+- Aligns all files to CA's date range
 - Excludes CA from aggregation (it's the target)
-- **EVE:** Uses all 20 states (21 files) - expected row sum = 84
-- **MID:** Uses 15 states (16 files) - excludes 6-day states for consistent Sunday data
-- **DAILY:** Combines EVE + MID - expected row sum = 148
+- **EVE:** Uses all 20 states (21 files), starts 2008-05-19, expected row sum = 84
+- **MID:** Uses 15 states (16 files), starts 2008-06-09, expected row sum = 64
+- **DAILY:** Combines EVE + MID, starts 2008-06-09, expected row sum = 148
+- Automatically truncates MID/DAILY to June 9, 2008 (MA Midday start date)
 
 ## BMAD Agent
 - **DataBot** — Data Curator (`/bmad:custom:agents:data-curator`)
